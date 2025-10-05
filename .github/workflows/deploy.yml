@@ -48,7 +48,7 @@ jobs:
         working-directory: ./temp_terraform
         run: |
           terraform init -backend=false
-          terraform apply
+          terraform apply -auto-approve
 
       - name: Get bucket name
         working-directory: ./temp_terraform
