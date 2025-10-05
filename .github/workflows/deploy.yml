@@ -9,7 +9,7 @@ on:
 env:
   TF_CLOUD_ORGANIZATION: "fiap-pos-tc"
   TF_WORKSPACE: "core-infra"
-  AWS_REGION: us-east-1
+  AWS_REGION: "us-east-1"
 
 jobs:
   terraform:
@@ -20,6 +20,13 @@ jobs:
       # 1️⃣ Pegar o código do repositório
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Debug AWS env
+        run: |
+          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
+          echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:0:4}..."
+          echo "AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:0:4}..."
+          echo "AWS_REGION=$AWS_REGION"
 
       # 2️⃣ Configurar credenciais da AWS
       - name: Configure AWS Credentials
