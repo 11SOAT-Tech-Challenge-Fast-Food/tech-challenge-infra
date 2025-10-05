@@ -1,5 +1,5 @@
 variable "projectName" {
-  default = "tc-fiap-fast-food"
+  default = "tech-challenge-ordermanagement"
 }
 
 variable "regionDefault" {
