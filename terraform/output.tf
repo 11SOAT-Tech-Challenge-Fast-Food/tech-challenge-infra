@@ -17,7 +17,3 @@ output "subnet_id" {
 output "ecr_repository_url" {
   value = aws_ecr_repository.ecr_repo.repository_url
 }
-
-output "aws_s3_bucket_name" {
-  value = aws_s3_bucket.bucket_backend.bucket
-}
