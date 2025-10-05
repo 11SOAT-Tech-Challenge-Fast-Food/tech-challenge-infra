@@ -74,13 +74,6 @@ jobs:
             -no-color \
             -out=tfplan
 
-      - name: Upload Plan Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: tfplan
-          path: terraform/tfplan
-          if-no-files-found: error
-
       - name: Terraform Apply
         working-directory: ./terraform
         run: |
