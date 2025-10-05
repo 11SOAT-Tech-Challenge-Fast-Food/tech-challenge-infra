@@ -11,7 +11,6 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  TF_BUCKET: tc-fiap-fast-food-${{github.run_id}}"
   TF_STATE_KEY: terraform.tfstate
   DYNAMODB_TABLE: terraform-locks
   TERRAFORM_VERSION: 1.12.2
@@ -39,29 +38,41 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Terraform Init
-        working-directory: ./terraform
-        run: terraform init -upgrade -backend=false
-
-      - name: Init S3 Bucket
-        working-directory: ./terraform
+      - name: Create temporary config
         run: |
-          terraform apply -auto-approve -target=aws_s3_bucket.bucket_backend || echo "Bucket already created"
+          mkdir -p temp_terraform
+          cp -r terraform/* temp_terraform/
+          rm -f temp_terraform/backend.tf 2>/dev/null || true
 
-      - name: Config Backend
+      - name: Initialize Terraform locally
+        working-directory: ./temp_terraform
         run: |
-          cat <<EOF > backend.tf
+          terraform init -backend=false
+          terraform apply -auto-approve -target=aws_s3_bucket.bucket_backend
+
+      - name: Get bucket name
+        working-directory: ./temp_terraform
+        id: bucket
+        run: |
+          BUCKET_NAME=$(terraform output -raw bucket_name)
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_ENV
+
+      - name: Configure backend
+        run: |
+          cat > terraform/backend.tf << EOL
           terraform {
             backend "s3" {
-              bucket = "${{ env.TF_BUCKET }}"
+              bucket = "${{ env.bucket_name }}"
               key    = "fiap-tc/terraform.tfstate"
-              region = "us-east-1"
+              region = "${{ env.AWS_REGION }}"
             }
           }
-          EOF
+          EOL
 
-      - name: Init terraform
-        run: terraform init -upgrade -migrate-state -force-copy
+      - name: Initialize with S3 backend
+        working-directory: ./terraform
+        run: |
+          terraform init -migrate-state -force-copy
 
       - name: Validate Terraform
         run: terraform validate
