@@ -11,7 +11,7 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  TF_BUCKET: tc-fiap-fast-food-${{random_id.suffix.hex}}"
+  TF_BUCKET: tc-fiap-fast-food-${{github.run_id}}"
   TF_STATE_BUCKET: tc-fiap-fast-food-${{ secrets.AWS_ACCOUNT_ID }}
   TF_STATE_KEY: terraform.tfstate
   DYNAMODB_TABLE: terraform-locks
