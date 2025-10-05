@@ -57,7 +57,7 @@ jobs:
         working-directory: ./temp_terraform
         id: set-bucket
         run: |
-          BUCKET_NAME=$(terraform output -raw aws_s3_bucket)
+          BUCKET_NAME=$(terraform output -raw aws_s3_bucket_name)
           echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
 
   terraform-init:
