@@ -18,6 +18,9 @@ jobs:
     name: Terraform Apply
     runs-on: ubuntu-latest
     environment: production
+    env:
+      # TF_API_TOKEN para autenticar no Terraform Cloud/HCP
+      TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
 
     steps:
       - name: Checkout repository
