@@ -105,7 +105,7 @@ jobs:
 
   plan:
     name: Terraform Plan
-    needs: validate
+    needs: terraform-init
     runs-on: ubuntu-latest
     environment: production
 
