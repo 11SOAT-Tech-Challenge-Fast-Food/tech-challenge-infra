@@ -50,7 +50,7 @@ jobs:
 
       - name: Init S3 Bucket
         run: |
-          terraform apply -auto-approve -target=aws_s3_bucket.terraform_state || echo "Bucket já existe, seguindo..."
+          terraform apply -auto-approve -target=aws_s3_bucket.bucket_backend || echo "Bucket já existe, seguindo..."
 
       - name: Config Backend
         run: |
