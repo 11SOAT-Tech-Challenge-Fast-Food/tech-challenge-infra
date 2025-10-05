@@ -21,8 +21,6 @@ jobs:
     name: Setup Infrastructure
     runs-on: ubuntu-latest
     environment: production
-    outputs:
-      bucket-created: ${{ steps.setup.outputs.bucket-created }}
 
     permissions:
       contents: read
@@ -46,11 +44,13 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Init
+        working-directory: ./terraform
         run: terraform init -upgrade
 
       - name: Init S3 Bucket
+        working-directory: ./terraform
         run: |
-          terraform apply -auto-approve -target=aws_s3_bucket.bucket_backend || echo "Bucket já existe, seguindo..."
+          terraform apply -auto-approve -target=aws_s3_bucket.bucket_backend || echo "Bucket already created"
 
       - name: Config Backend
         run: |
