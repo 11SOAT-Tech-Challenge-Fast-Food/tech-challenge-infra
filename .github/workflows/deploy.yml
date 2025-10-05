@@ -12,7 +12,6 @@ on:
 env:
   AWS_REGION: us-east-1
   TF_BUCKET: tc-fiap-fast-food-${{github.run_id}}"
-  TF_STATE_BUCKET: tc-fiap-fast-food-${{ secrets.AWS_ACCOUNT_ID }}
   TF_STATE_KEY: terraform.tfstate
   DYNAMODB_TABLE: terraform-locks
   TERRAFORM_VERSION: 1.12.2
@@ -95,12 +94,7 @@ jobs:
       - name: Initialize Terraform
         working-directory: ./terraform
         run: |
-          terraform init \
-            -backend-config="bucket=${{ env.TF_STATE_BUCKET }}" \
-            -backend-config="key=${{ env.TF_STATE_KEY }}" \
-            -backend-config="region=${{ env.AWS_REGION }}" \
-            -backend-config="dynamodb_table=${{ env.DYNAMODB_TABLE }}" \
-            -input=false
+          terraform init 
 
   terraform-validate:
     name: Terraform Validate
@@ -119,7 +113,7 @@ jobs:
 
       - name: Validate Terraform
         working-directory: ./terraform
-        run: terraform validate -no-color
+        run: terraform validate
 
   terraform-plan:
     name: Terraform Plan
