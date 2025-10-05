@@ -1,8 +1,9 @@
 terraform {
-  backend "remote" {
+  cloud {
     organization = "fiap-pos-tc"
+
     workspaces {
-      name = "default"
+      name = "core-infra"
     }
   }
 }
