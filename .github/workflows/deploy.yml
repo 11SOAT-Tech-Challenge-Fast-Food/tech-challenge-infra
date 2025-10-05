@@ -46,11 +46,18 @@ jobs:
           # Verifica se o bucket já existe
           if ! aws s3api head-bucket --bucket "${{ env.TF_STATE_BUCKET }}" 2>/dev/null; then
             echo "Creating S3 bucket ${{ env.TF_STATE_BUCKET }}"
-            aws s3api create-bucket \
-              --bucket "${{ env.TF_STATE_BUCKET }}" \
-              --region "${{ env.AWS_REGION }}" \
-              --create-bucket-configuration LocationConstraint="${{ env.AWS_REGION }}" \
-              || echo "Bucket may already exist"
+            if [ "${{ env.AWS_REGION }}" = "us-east-1" ]; then
+              aws s3api create-bucket \
+                --bucket "${{ env.TF_STATE_BUCKET }}" \
+                --region "${{ env.AWS_REGION }}" \
+                || echo "Bucket may already exist"
+            else
+              aws s3api create-bucket \
+                --bucket "${{ env.TF_STATE_BUCKET }}" \
+                --region "${{ env.AWS_REGION }}" \
+                --create-bucket-configuration LocationConstraint="${{ env.AWS_REGION }}" \
+                || echo "Bucket may already exist"
+            fi
             
             echo "Enabling versioning"
             aws s3api put-bucket-versioning \
