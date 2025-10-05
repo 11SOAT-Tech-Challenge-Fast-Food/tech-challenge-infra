@@ -17,18 +17,19 @@ env:
   TERRAFORM_VERSION: 1.12.2
 
 jobs:
-  setup-infra:
-    name: Setup Infrastructure
+  terraform:
+    name: Terraform
     runs-on: ubuntu-latest
     environment: production
-
-    permissions:
-      contents: read
-      id-token: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -38,13 +39,7 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
       - name: Terraform Init
-        working-directory: ./terraform
         run: terraform init -upgrade
 
       - name: Init S3 Bucket
@@ -64,71 +59,11 @@ jobs:
           }
           EOF
 
-  terraform-init:
-    name: Terraform Init
-    needs: setup-infra
-    runs-on: ubuntu-latest
-    environment: production
-
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
-
-      - name: Initialize Terraform
-        working-directory: ./terraform
-        run: |
-          terraform init 
-
-  terraform-validate:
-    name: Terraform Validate
-    needs: terraform-init
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
+      - name: Init terraform
+        run: terraform init -upgrade -migrate-state -force-copy
 
       - name: Validate Terraform
-        working-directory: ./terraform
         run: terraform validate
-
-  terraform-plan:
-    name: Terraform Plan
-    needs: terraform-validate
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Plan
         id: plan
@@ -145,36 +80,6 @@ jobs:
           name: tfplan
           path: terraform/tfplan
           if-no-files-found: error
-
-  terraform-apply:
-    name: Terraform Apply
-    needs: terraform-plan
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    environment: production
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Download Plan Artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: tfplan
-          path: terraform/
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Apply
         working-directory: ./terraform
