@@ -11,13 +11,84 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  TF_STATE_KEY: terraform.tfstate
-  DYNAMODB_TABLE: terraform-locks
   TERRAFORM_VERSION: 1.12.2
 
 jobs:
-  terraform:
-    name: Terraform
+  setup:
+    name: Setup Infrastructure
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      bucket_name: ${{ steps.set-bucket.outputs.bucket_name }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Create temporary config
+        id: setup
+        run: |
+          mkdir -p temp_terraform
+          cp -r terraform/* temp_terraform/
+          rm -f temp_terraform/backend.tf 2>/dev/null || true
+
+      - name: Initialize Terraform locally
+        working-directory: ./temp_terraform
+        run: terraform init -backend=false
+
+      - name: Create S3 Bucket
+        working-directory: ./temp_terraform
+        run: terraform apply -auto-approve -target=aws_s3_bucket.bucket_backend
+
+      - name: Get bucket name
+        working-directory: ./temp_terraform
+        id: set-bucket
+        run: |
+          BUCKET_NAME=$(terraform output -raw bucket_name)
+          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_OUTPUT
+
+  terraform-init:
+    name: Initialize Terraform
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure backend
+        run: |
+          cat > terraform/backend.tf << EOL
+          terraform {
+            backend "s3" {
+              bucket = "${{ needs.setup.outputs.bucket_name }}"
+              key    = "fiap-tc/terraform.tfstate"
+              region = "${{ env.AWS_REGION }}"
+            }
+          }
+          EOL
+
+      - name: Initialize with S3 backend
+        working-directory: ./terraform
+        run: terraform init -migrate-state -force-copy
+
+  validate:
+    name: Validate Terraform
+    needs: terraform-init
     runs-on: ubuntu-latest
     environment: production
 
@@ -30,66 +101,45 @@ jobs:
         with:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Create temporary config
-        run: |
-          mkdir -p temp_terraform
-          cp -r terraform/* temp_terraform/
-          rm -f temp_terraform/backend.tf 2>/dev/null || true
-
-      - name: Initialize Terraform locally
-        working-directory: ./temp_terraform
-        run: |
-          terraform init -backend=false
-          terraform apply -auto-approve -target=aws_s3_bucket.bucket_backend
-
-      - name: Get bucket name
-        working-directory: ./temp_terraform
-        id: bucket
-        run: |
-          BUCKET_NAME=$(terraform output -raw aws_s3_bucket_name)
-          echo "bucket_name=$BUCKET_NAME" >> $GITHUB_ENV
-
-      - name: Configure backend
-        run: |
-          cat > terraform/backend.tf << EOL
-          terraform {
-            backend "s3" {
-              bucket = "${{ env.bucket_name }}"
-              key    = "fiap-tc/terraform.tfstate"
-              region = "${{ env.AWS_REGION }}"
-            }
-          }
-          EOL
-
-      - name: Initialize with S3 backend
-        working-directory: ./terraform
-        run: |
-          terraform init -migrate-state -force-copy
-
       - name: Validate Terraform
+        working-directory: ./terraform
         run: terraform validate
 
+  plan:
+    name: Terraform Plan
+    needs: validate
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
       - name: Terraform Plan
-        id: plan
         working-directory: ./terraform
-        run: |
-          terraform plan \
-            -input=false \
-            -no-color \
-            -out=tfplan
+        run: terraform plan -input=false -no-color -out=tfplan
+
+  apply:
+    name: Terraform Apply
+    needs: plan
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Apply
         working-directory: ./terraform
-        run: |
-          terraform apply \
-            -input=false \
-            -auto-approve \
-            tfplan
+        run: terraform apply -input=false -auto-approve tfplan
