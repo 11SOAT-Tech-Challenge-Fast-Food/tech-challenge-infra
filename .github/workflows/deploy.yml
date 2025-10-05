@@ -40,7 +40,7 @@ jobs:
         with:
           role-to-assume: arn:aws:iam::${AWS_ACCOUNT_ID}:role/LabRole
           aws-region: ${{ env.AWS_REGION }}
-          role-session-name: GitHubActions-${{ github.run_id }}
+          role-session-name: github-actions
           role-duration-seconds: 3600
 
       - name: Setup Terraform
