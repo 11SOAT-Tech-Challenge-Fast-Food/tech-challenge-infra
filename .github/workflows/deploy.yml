@@ -37,13 +37,17 @@ jobs:
           terraform_version: ${{ env.TERRAFORM_VERSION }}
 
       - name: Terraform Init
+        working-directory: ./terraform
         run: terraform init
 
       - name: Validate Terraform
+        working-directory: ./terraform
         run: terraform validate
 
       - name: Terraform Plan
+        working-directory: ./terraform
         run: terraform plan -input=false -no-color -out=tfplan
 
       - name: Terraform Apply
+        working-directory: ./terraform
         run: terraform apply -input=false -auto-approve tfplan
