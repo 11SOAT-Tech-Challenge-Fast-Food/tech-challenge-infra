@@ -40,7 +40,7 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Terraform Init
-        run: terraform init -upgrade
+        run: terraform init -upgrade -backend=false
 
       - name: Init S3 Bucket
         working-directory: ./terraform
