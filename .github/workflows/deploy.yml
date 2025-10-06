@@ -17,12 +17,10 @@ jobs:
     environment: production
 
     steps:
-      # 1️⃣ Pegar o código do repositório
       - name: Checkout repository
         uses: actions/checkout@v4
 
 
-      # 2️⃣ Configurar credenciais da AWS
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -31,36 +29,24 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Debug AWS env
-        run: |
-          echo "AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID"
-          echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:0:4}..."
-          echo "AWS_SESSION_TOKEN=${AWS_SESSION_TOKEN:0:4}..."
-          echo "AWS_REGION=$AWS_REGION"
-
-      # 3️⃣ Instalar Terraform 1.6 e configurar token CLI
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.12.2
           cli_config_credentials_token: ${{ secrets.TF_API_TOKEN }}
 
-      # 4️⃣ Inicializar backend remoto (workspace core-infra)
       - name: Terraform Init
         working-directory: ./terraform
         run: terraform init
 
-      # 5️⃣ Validar a configuração Terraform
       - name: Terraform Validate
         working-directory: ./terraform
         run: terraform validate
 
-      # 6️⃣ Criar plano
       - name: Terraform Plan
         working-directory: ./terraform
         run: terraform plan -out=tfplan
 
-      # 7️⃣ Aplicar plano automaticamente
       - name: Terraform Apply
         working-directory: ./terraform
         run: terraform apply -auto-approve tfplan
