@@ -30,3 +30,9 @@ variable "instanceType" {
 variable "accessConfig" {
   default = "API_AND_CONFIG_MAP"
 }
+
+variable "services" {
+  description = "List of microservices to create ECR repositories for"
+  type        = list(string)
+  default     = ["order-app", "payment-app", "product-app", "customer-app"]
+}
